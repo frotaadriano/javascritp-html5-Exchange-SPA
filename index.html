@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Bootstrap, from Twitter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Cotacao FrontEnd" />
+    <meta name="author" content="Adriano" />
+
+    <!-- styles -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+
+    <!-- JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</head>
+
+<body>
+    <script>
+
+        //*********************************************************************//
+        var api_key = "YOUR_KEY AT :https://1forge.com/forex-data-api";
+        //*********************************************************************//
+
+        $(document).ready(function () {
+
+            $('#divResult').hide();
+            $('#alertBox').hide();
+            $('#spanPanelBefore').hide();
+
+            /**************** Panel Load *****************/
+            LoadPanel();
+
+            /**************** Convert Button click action *****************/
+            $('#btnConverter').click(function () {
+                // Also update Panel after any convertion?
+                // if yes, uncomment code below
+                //updatePanel();
+
+                if ($('#value').val() == '') {
+                    $('#alertBox').show().fadeIn(1000);
+                    $('#alertMsg').html('Please fill the value field!');
+                    return false;
+                }
+                if (!$('#alertBox')["0"].hidden) {
+
+                    $('#alertMsg').hide("slow", function () {
+                        $("#alertMsg").animate({
+                            opacity: 0.25,
+                            left: "+=50",
+                            height: "toggle"
+                        }, 5000, function () {
+                            // Animation complete.
+                        });
+                    });
+                }
+
+                var de = $('#optionFrom').val();
+                var para = $('#optionTo').val();
+               
+                if (de == para) {
+                    $('#alertBox').show().fadeIn(1000);
+                    $('#alertMsg').html('Choose different currencies for conversion!');
+                    return false;
+                }
+
+                $.get({
+
+                    'url': "https://forex.1forge.com/1.0.3/convert?from=" + de + "&to=" + para + "&quantity=100&api_key=" + api_key,
+                    'type': 'GET',
+                    'success': function (data) {
+                        $('#divResult').show();
+                        var textoResposta = "<p> value convertido:" + data.value + "</p>";
+                        textoResposta = textoResposta + "<p>Observação:" + data.text + "</p> "
+                        $('#valueCovertido').html(textoResposta);
+                    }
+                })
+            });
+
+            $('#value').focus(function () {
+                $('#alertBox').fadeOut(1000);
+            });
+
+            /***************** Counter **************************/
+            Counter();
+
+        });
+        /*********************************************/
+         
+        function UpdatePanel() {
+            var updatePanel = {
+                "async": true,
+                "crossDomain": true,
+                "url": "https://forex.1forge.com/1.0.3/quotes?pairs=USDEUR%2CUSDGBP%2CUSDJPY%2CUSDJPY%2CUSDCNH&api_key=" + api_key,
+                "method": "GET"
+            }
+
+            $.ajax(updatePanel).done(function (response) {
+                newPanelValues = '';
+                for (var i = 0; i < response.length; i++) {
+                    newPanelValues += response[i]['symbol'] + '|' + response[i]['bid'] + '|' + response[i]['ask'] + '|' + response[i]['price'] + '|';
+                }
+
+                var aux_arrayValueBefore = $('#spanPanelBefore').html().split('|');
+                var LastResponse = new Array();
+
+                var Counter = 0;
+                for (let index = 0; index < response.length; index++) {
+                    let symbol = aux_arrayValueBefore[Counter]; Counter++;
+                    let bid = aux_arrayValueBefore[Counter]; Counter++;
+                    let ask = aux_arrayValueBefore[Counter]; Counter++;
+                    let price = aux_arrayValueBefore[Counter]; Counter++;
+
+                    LastResponse.push({ symbol, bid, ask, price });
+                }
+
+                var eTable = "<table><thead><tr><th colspan='3'></th></tr><tr><th>Coversão</th><th>Compra</th><th>Venda</th><th>Preço</th></tr></thead><tbody>"
+                for (var i = 0; i < response.length; i++) {
+
+                    eTable += "<tr>";
+                    eTable += "<td>" + response[i]['symbol'] + "</td>";
+                    eTable += "<td>" + CompareValueWithBefore(response[i]['bid'], LastResponse[i]['bid']) + "</td>";
+                    eTable += "<td>" + CompareValueWithBefore(response[i]['ask'], LastResponse[i]['ask']) + "</td>";
+                    eTable += "<td>" + CompareValueWithBefore(response[i]['price'], LastResponse[i]['price']) + "</td>";
+                    eTable += "</tr>";
+                }
+                eTable += "</tbody></table>";
+                $('#CurrencyTbl').html(eTable);
+            });
+        }
+
+        function CompareValueWithBefore(newValue, oldValue) {
+            let result = '' + newValue;
+            let imgUP = '<img src="./imgUP-16.png">';
+            let imgDown = '<img src="./imgDown-16.png">';
+            let imgEqual = '<img src="./imgEqual-16.png">';
+
+
+            if (newValue == oldValue) {
+                return result += ' ' + imgEqual;
+            }
+            else {
+                if (newValue > oldValue) {
+                    return result += ' ' + imgUP;
+                }
+                else {
+                    return result += ' ' + imgDown;
+                }
+            }
+
+
+        }
+
+
+        function LoadPanel() {
+            var LoadPanel = {
+                "async": true,
+                "crossDomain": true,
+                "url": "https://forex.1forge.com/1.0.3/quotes?pairs=USDEUR%2CUSDGBP%2CUSDJPY%2CUSDJPY%2CUSDCNH&api_key=" + api_key,
+                "method": "GET"
+            }
+
+            $.ajax(LoadPanel).done(function (response) {
+                $('#painelLoad').innerText = response;
+                CriarTabela(response);
+            });
+        }
+        function CriarTabela(data) {
+
+            var panelValueBefore = '';
+            var eTable = "<table><thead><tr><th colspan='3'></th></tr><tr><th>Conversion</th><th>Buy</th><th>Sell</th><th>Price</th></tr></thead><tbody>"
+            for (var i = 0; i < data.length; i++) {
+                eTable += "<tr>";
+                eTable += "<td>" + data[i]['symbol'] + "</td>";
+                eTable += "<td>" + data[i]['bid'] + "</td>";
+                eTable += "<td>" + data[i]['ask'] + "</td>";
+                eTable += "<td>" + data[i]['price'] + "</td>";
+                eTable += "</tr>";
+                panelValueBefore += data[i]['symbol'] + '|' + data[i]['bid'] + '|' + data[i]['ask'] + '|' + data[i]['price'] + '|';
+            }
+            eTable += "</tbody></table>";
+            $('#CurrencyTbl').html(eTable);
+
+            $('#spanPanelBefore').html('' + panelValueBefore);
+
+        }
+
+        function Counter() {
+            var n = 0;
+            var l = document.getElementById("Counter");
+            window.setInterval(function () {
+                if (n > 0) {
+                    l.innerHTML = n;
+                }
+                n++;
+                if (n > 10) {
+                    n = 0;
+                    updatePanel();
+                }
+            }, 1000);
+        }
+
+    </script>
+
+
+
+    <div class="container-fluid">
+        <input type="hidden" id="painelLoad" />
+        <div class="jumbotron">
+            <h1> Frontend quote </ h1>
+                             <p> Bootstrap interface for quotations. </ p>
+                             <p> by Adriano Frota. </ p>
+                             <span> Panel refreshes every 10 seconds
+                                 <div id = 'Counter'> </ div>
+                             </ span>
+        </div>
+        <span id='spanPanelBefore'></span>
+
+        <div class="col-xs-12 col-md-12 col-sm-12">
+            <div class="panel panel-danger">
+                <div class="panel-heading">
+                    <h3 class="panel-title">Exchange</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-xs-12 col-md-6">
+                            <table class="table table-striped" id="CurrencyTbl">
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xs-12 col-md-12 col-sm-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    <h3 class="panel-title">MAKE YOUR CONVERSION</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="row">
+                        <div class="col-xs-6 col-md-6">
+                            <div class="form-group">
+                                <label for="optionFrom">TO</label>
+                                <select class="form-control" id="optionFrom">
+                                    <option>USD</option>
+                                    <option>EUR</option>
+                                    <option>GBP</option>
+                                    <option>JPY</option>
+                                    <option>CNH</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-xs-6 col-md-6">
+                            <div class="form-group">
+                                <label for="optionTo">FROM</label>
+                                <select class="form-control" id="optionTo">
+                                    <option>EUR</option>
+                                    <option>USD</option>
+                                    <option>GBP</option>
+                                    <option>JPY</option>
+                                    <option>CNH</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-6 col-md-6">
+                            <div class="form-group">
+                                <input type="text" class="form-control" id="value" placeholder="value">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-xs-2 col-md-3">
+                            <button type="submit" class="btn btn-small " id="btnConverter">Convert</button>
+                        </div>
+                        <div class="col-xs-10 col-md-9" id="alertBox">
+                            <div class="alert alert-danger" role="alert" id="alertMsg">
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="col-xs-12 col-md-12 col-sm-12" id='divResult'>
+            <div class="panel panel-success">
+                <div class="panel-heading">
+                    <h3 class="panel-title">result</h3>
+                </div>
+                <div class="panel-body">
+                    <div class="alert alert-success" role="alert">
+                        <span id="valueCovertido"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+    </div>
+    </div>
+</body>
+
+</html>
